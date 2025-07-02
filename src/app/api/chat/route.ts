@@ -1,17 +1,28 @@
 // src/app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-// No need to import 'node-fetch' if you're using native fetch in Next.js
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+type FrontendMessage = {
+  role: 'user' | 'assistant'; 
+  content: string;
+};
+
+
+type GeminiMessagePart = {
+  text: string;
+};
+
+type GeminiMessage = {
+  role: 'user' | 'model'; 
+  parts: GeminiMessagePart[];
+};
+
 
 type GeminiResponse = {
   candidates?: {
     content?: {
-      parts?: { text?: string }[]
-    }
-  }[]
-  // Add an error field to catch API-level errors if they exist in the response
+      parts?: { text?: string }[];
+    };
+  }[];
   error?: {
     message: string;
     code: number;
@@ -19,17 +30,21 @@ type GeminiResponse = {
   };
 };
 
-export async function POST(req: NextRequest) {
-  const { messages } = await req.json();
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-  // Construct Gemini messages, ensuring alternating roles and proper system prompt placement.
-  // The system prompt should be the first 'user' message.
-  const geminiMessages = [
+export async function POST(req: NextRequest) {
+
+  const { messages }: { messages: FrontendMessage[] } = await req.json();
+
+ 
+  const geminiMessages: GeminiMessage[] = [
     {
-      role: 'user', // System prompt goes as the first user turn
+      role: 'user', 
       parts: [{ text: 'You are an AI that plays a guessing game by asking yes/no/maybe questions to guess a word the user is thinking of.' }],
     },
-    ...messages.map((msg: any) => ({
+  
+    ...messages.map((msg: FrontendMessage): GeminiMessage => ({
       role: msg.role === 'assistant' ? 'model' : 'user', // Map 'assistant' to 'model'
       parts: [{ text: msg.content }],
     })),
@@ -49,15 +64,18 @@ export async function POST(req: NextRequest) {
 
     // Check for API-level errors first
     if (data.error) {
-        console.error('Gemini API Error Response:', data.error.message);
-        return NextResponse.json({ reply: `Gemini API Error: ${data.error.message}` }, { status: data.error.code || 500 });
+      console.error('Gemini API Error Response:', data.error.message);
+      return NextResponse.json(
+        { reply: `Gemini API Error: ${data.error.message}` },
+        { status: data.error.code || 500 }
+      );
     }
 
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I didn’t get that. (No valid candidate found.)';
 
     return NextResponse.json({ reply });
   } catch (error) {
-    console.error('Gemini Request Error:', error);
+  
     return NextResponse.json({ reply: 'Error contacting Gemini API.' }, { status: 500 });
   }
 }

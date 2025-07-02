@@ -1,30 +1,41 @@
-// pages/index.tsx
 'use client';
 
 import { useState } from 'react';
 
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 export default function Home() {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! Think of a word and I'll try to guess it by asking questions. Ready?" }
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content:
+        "Hello! Think of a word and I'll try to guess it by asking questions. Ready?",
+    },
   ]);
   const [isStarted, setIsStarted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleUserResponse = (response: string) => {
-    const newMessages = [...messages, { role: 'user', content: response }];
+    const newMessages: Message[] = [
+      ...messages,
+      { role: 'user', content: response },
+    ];
     setMessages(newMessages);
-    sendToAI(newMessages); // Next step: send to backend
+    sendToAI(newMessages);
   };
 
-  const sendToAI = async (msgs: any) => {
+  const sendToAI = async (msgs: Message[]) => {
     setLoading(true);
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: msgs })
+        body: JSON.stringify({ messages: msgs }),
       });
-      const data = await res.json();
+      const data: { reply: string } = await res.json();
       setMessages([...msgs, { role: 'assistant', content: data.reply }]);
     } catch (err) {
       console.error(err);
@@ -40,7 +51,14 @@ export default function Home() {
 
         <div className="space-y-2 max-h-64 overflow-y-auto border p-3 rounded">
           {messages.map((msg, i) => (
-            <div key={i} className={`text-sm ${msg.role === 'assistant' ? 'text-blue-600' : 'text-green-700 text-right'}`}>
+            <div
+              key={i}
+              className={`text-sm ${
+                msg.role === 'assistant'
+                  ? 'text-blue-600'
+                  : 'text-green-700 text-right'
+              }`}
+            >
               {msg.content}
             </div>
           ))}
