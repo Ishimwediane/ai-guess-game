@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reply });
   } catch (error) {
-  
+  console.error("Error contacting Gemini API:", error);
     return NextResponse.json({ reply: 'Error contacting Gemini API.' }, { status: 500 });
   }
 }
